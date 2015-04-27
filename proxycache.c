@@ -21,28 +21,29 @@ typedef struct in_addr IN_ADDR;
 int main(){
 	char recvBuffer[1024];
 	int n;
+	printf("%s","Test");
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 	char data[4] = "Test";
 	char buffer[512] ="GET www.google.be HTTP/1.1\r\nHost: www.google.be\r\nConnection: Close\r\nContent-type: application/x-www-form-urlencoded\r\nContent-Length: 0\r\n\r\n";
+	printf("Test");
 	if(sock == INVALID_SOCKET)
 	{
 		perror("socket()");
 		exit(errno);
 	}
-
+	printf("Initialisation");
 	struct hostent *hostinfo = NULL;
 	SOCKADDR_IN sin = { 0 };
 	const char *hostname = "208.97.177.124";
 
 
-
+	printf("Hôte trouvé");
 	hostinfo = gethostbyname(hostname);
 	if (hostinfo == NULL)
 	{
 		fprintf (stderr, "Unknown host %s.\n", hostname);
 		exit(EXIT_FAILURE);
 	}
-
 	sin.sin_addr = *(IN_ADDR *) hostinfo->h_addr;
 	sin.sin_port = htons(PORT);
 	sin.sin_family = AF_INET;
@@ -52,20 +53,22 @@ int main(){
 		perror("connect()");
 		exit(errno);
 	}
-
+	printf("Connecté");
 	if(n = (send(sock, buffer, 10, 0)) < 0)
 	{
 		perror("send()");
 		exit(errno);
 	}
+	printf("Reqête envoyée");
 	if((n = recv(sock,recvBuffer,sizeof buffer - 1,0)) < 0)
 	{
 		perror("recv()");
 		exit(errno);
 	}
+	printf("Recepetion terminée");
 	printf("%s",recvBuffer);	
 	closesocket(sock);
-
+	return 1;
 
 
 }
