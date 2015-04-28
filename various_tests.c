@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 //Place dans le buffer la chaine de caractere qu'il y a entre begin et end.
 void research(char *str, char *begin, char *end, char *buffer){
 	char *first = strstr(str,begin);
 	if(first != NULL){
 		char *last = strstr(first,end);
-		printf("First : %s \nLast : %s \n",first,last);
 		first += strlen(begin);
 		if(last != NULL){
 			while(first != last){
@@ -27,9 +27,36 @@ void research(char *str, char *begin, char *end, char *buffer){
 	buffer[0] = '\0';
 }
 
+//filter a string with only alphanumeric character in the destination string.
+void filter(char *name){
+	char *src, *dst;
+	for (src = name, dst = src; *src; src++) {
+   		if ('a' <= *src && *src <= 'z' 
+    	|| '0' <= *src && *src <= '9' 
+    	|| *src == '_') *dst++ = *src;
+	}
+	*dst = '\0';
+}
+
+char * getHour(){
+	struct tm* gmtime (const time_t *temps);
+	time_t temps;
+	struct tm date;
+	char *result = (char *) malloc(sizeof(char) * 32);
+
+	time(&temps);
+    date=*gmtime(&temps);
+    sprintf(result, "%d:%d",(date.tm_hour+2+24)%24, date.tm_min);
+    printf("%s\n",result);
+
+    return result;
+    
+}
+
 int main(){
 	char buffer[512] = "GET www.google.be HTTP/1.1\r\nHost: www.google.be\r\nConnection: Close\r\nContent-type: application/x-www-form-urlencoded\r\nContent-Length: 0\r\n\r\n";
 	char buffer2[512];
+	char buffer3[] = "chien/\//'3é&§§ et çç chat";
 	char *request = strtok(buffer, "\n\r");
 	char *get;
 	int i=0;
@@ -49,6 +76,9 @@ int main(){
     	request = strtok(NULL, "\n\r");
     }
 
+    printf("Heure : %s\n", getHour());
+    filter(buffer3);
+    printf("%s\n", buffer3);
  	/*
     httpend = " HTTP";
     end = "\r\n";
