@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -7,6 +8,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <string.h>
+#define SIZEMAX 512
 #define PORT 4242
 #define errno -1
 #define INVALID_SOCKET -1
@@ -17,13 +19,27 @@ typedef struct sockaddr_in SOCKADDR_IN;
 typedef struct sockaddr SOCKADDR;
 typedef struct in_addr IN_ADDR;
 
+int isAlreadySave(char *file){
+	DIR * rep = opendir(".");
+	if(rep != NULL){
+		struct dirent *dir;
+		while((dir = readdir(rep)) != NULL){
+			if(strcmp(dir->d_name,file) == 0){
+				return 1;
+			}
+		}	
+		closedir(rep);
 
+	}
+	return 0;
+
+
+}
 //Methode qui rehcherche les informations utiles dans ma requête
 void research(char *str, char *begin, char *end, char *buffer){
 	char *first = strstr(str,begin);
 	if(first != NULL){
 		char *last = strstr(first,end);
-		printf("First : %s \nLast : %s \n",first,last);
 		first += strlen(begin);
 		if(last != NULL){
 			while(first != last){
@@ -43,6 +59,7 @@ void research(char *str, char *begin, char *end, char *buffer){
 	buffer[0] = '\0';
 }
 int main(){
+
 	//Recupération de toutes les pages web en memoire dans le dossier courant 
 	struct hostent *webinfo = NULL;
 	SOCKADDR_IN webSin = { 0 };
@@ -108,56 +125,78 @@ int main(){
 	{
 		if(i==0){
 			research(request, "GET ", " HTTP/1.1", page);
- 			printf("\n%s\n", page);
 		}
 		if(i==1){
-    		research(request, "Host: ", "\r\n", host);
- 			printf("\n%s\n", host);
+    			research(request, "Host: ", "\r\n", host);
  		}
 
  		i++;
     	request = strtok(NULL, "\n\r");
     	}
-	//Verification si la page demandée n'est pas en memoire
-	
 
 	/*Creation de socket de connexion avec le serveur web 
 	lorsque la page demandée n'est pas en cache*/
-	if(webSock == INVALID_SOCKET)
-	{
-		perror("socket()");
-		exit(errno);
-	}
-	
-	webinfo = gethostbyname(webip);
-	if (webinfo == NULL)
-	{
-		fprintf (stderr, "Unknown host ");
-		exit(EXIT_FAILURE);
-	}
-	webSin.sin_addr = *(IN_ADDR *) webinfo->h_addr;
-	webSin.sin_port = htons(80);
-	webSin.sin_family = AF_INET;
+	strcat(host,page);
+	strcat(host,".html");
+	if(!isAlreadySave(host)){
+		printf("Page non sauvée\n");
 
-	if(connect(webSock,(SOCKADDR *) &webSin, sizeof(SOCKADDR)) == SOCKET_ERROR)
-	{
-		perror("connect()");
-		exit(errno);
+		if(webSock == INVALID_SOCKET)
+		{
+			perror("socket()");
+			exit(errno);
+		}
+		
+		webinfo = gethostbyname(webip);
+		if (webinfo == NULL)
+		{
+			fprintf (stderr, "Unknown host ");
+			exit(EXIT_FAILURE);
+		}
+		webSin.sin_addr = *(IN_ADDR *) webinfo->h_addr;
+		webSin.sin_port = htons(80);
+		webSin.sin_family = AF_INET;
+
+		if(connect(webSock,(SOCKADDR *) &webSin, sizeof(SOCKADDR)) == SOCKET_ERROR)
+		{
+			perror("connect()");
+			exit(errno);
+		}
+
+		//Envoi de la requête au serveur web
+		if(n = (write(webSock, buffer, strlen(buffer)) < 0))
+		{
+			perror("send()");
+			exit(errno);
+		}
+		puts(buffer);
+		//Lecture de la réponse du serveur web
+		if((n = read(webSock,webBuffer,sizeof webBuffer)) < 0)
+		{
+			perror("recv()");
+			exit(errno);
+		}
+		FILE *file = NULL;
+		file = fopen(host,"w");
+		if(file != NULL){
+			printf("ecriture fichier\n");
+			fputs(webBuffer,file);
+			fclose(file);
+		}
+	}
+	else{
+		//récupération de la page html
+		FILE *file = NULL;
+		file = fopen(host,"r");
+		char line[SIZEMAX];
+		if(file != NULL){
+			while(fgets(line,SIZEMAX,file) != NULL){
+				strcat(webBuffer,line);
+			}
+			fclose(file);
+		}
 	}
 
-	//Envoi de la requête au serveur web
-	if(n = (write(webSock, buffer, strlen(buffer)) < 0))
-	{
-		perror("send()");
-		exit(errno);
-	}
-	puts(buffer);
-	//Lecture de la réponse du serveur web
-	if((n = read(webSock,webBuffer,sizeof webBuffer)) < 0)
-	{
-		perror("recv()");
-		exit(errno);
-	}
 
 	//Transfert du contenu html au client
 	if(n = (write(csock, webBuffer, strlen(webBuffer)) < 0))
