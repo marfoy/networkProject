@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -19,6 +20,31 @@ typedef struct sockaddr_in SOCKADDR_IN;
 typedef struct sockaddr SOCKADDR;
 typedef struct in_addr IN_ADDR;
 
+
+void filter(char *name){
+	char *src, *dst;
+	for (src = name, dst = src; *src; src++) {
+   		if ('a' <= *src && *src <= 'z' 
+    	|| '0' <= *src && *src <= '9' 
+    	|| *src == '_') *dst++ = *src;
+	}
+	*dst = '\0';
+}
+
+char * getHour(){
+	struct tm* gmtime (const time_t *temps);
+	time_t temps;
+	struct tm date;
+	char *result = (char *) malloc(sizeof(char) * 32);
+
+	time(&temps);
+    date=*gmtime(&temps);
+    sprintf(result, "%d:%d",(date.tm_hour+2+24)%24, date.tm_min);
+    printf("%s\n",result);
+
+    return result;
+    
+}
 int isAlreadySave(char *file){
 	DIR * rep = opendir(".");
 	if(rep != NULL){
@@ -82,7 +108,7 @@ int main(){
 
 	SOCKADDR_IN sin = { 0 };
 
-	sin.sin_addr.s_addr = htonl(INADDR_ANY); //N'importe quelle adresse est accéptée car Serveur
+	sin.sin_addr.s_addr = htonl(INADDR_ANY); 
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(PORT);
 	//Connexion avec le client
@@ -137,6 +163,7 @@ int main(){
 	/*Creation de socket de connexion avec le serveur web 
 	lorsque la page demandée n'est pas en cache*/
 	strcat(host,page);
+	filter(host);
 	strcat(host,".html");
 	if(!isAlreadySave(host)){
 		printf("Page non sauvée\n");
@@ -186,6 +213,7 @@ int main(){
 	}
 	else{
 		//récupération de la page html
+		printf("recupération du fichier\n");
 		FILE *file = NULL;
 		file = fopen(host,"r");
 		char line[SIZEMAX];
