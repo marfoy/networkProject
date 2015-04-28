@@ -7,68 +7,119 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <string.h>
-#define closesocket(s) close(s)
-#define PORT 80
+#define PORT 4242
+#define errno -1
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
-#define errno -1
-typedef struct sockaddr_in SOCKADDR_IN;
+#define closesocket(s) close(s)
 typedef int SOCKET;
+typedef struct sockaddr_in SOCKADDR_IN;
 typedef struct sockaddr SOCKADDR;
 typedef struct in_addr IN_ADDR;
 
 
+
 int main(){
-	char recvBuffer[1024];
-	int n;
+
+	struct hostent *webinfo = NULL;
+	SOCKADDR_IN webSin = { 0 };
+	const char *webip = "208.97.177.124";
+	char buffer[512];
+	char webBuffer[512];
+	int n = 0;
+	SOCKET webSock = socket(AF_INET,SOCK_STREAM,0);
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-	char data[4] = "Test";
-	char buffer[512] ="GET / HTTP/1.1\r\nHost: www.perdu.com\r\n\r\n";
-	if(sock == INVALID_SOCKET)
+	SOCKADDR_IN csin = { 0 };
+	SOCKET csock;
+	int sinsize = sizeof csin;
+
+	if(sock == INVALID_SOCKET){
+
+		perror("socket()");
+		exit(1);
+
+	}
+
+	SOCKADDR_IN sin = { 0 };
+
+	sin.sin_addr.s_addr = htonl(INADDR_ANY); //N'importe quelle adresse est accéptée car Serveur
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(PORT);
+
+	if ( bind( sock, (SOCKADDR *) &sin, sizeof sin) == SOCKET_ERROR)
+	{
+		perror("blind()");
+		exit(1);
+	}
+
+	if( listen(sock, 5) == SOCKET_ERROR)
+	{
+		perror("listen()");
+		exit(1);
+	}
+
+	csock = accept(sock, (SOCKADDR *) &csin, &sinsize);
+	printf("Hôte connecté\n");
+	if(csock == INVALID_SOCKET)
+	{
+		perror("accept()");
+		exit(1);
+
+	}
+
+	printf("Requête reçue\n");
+
+	if((n = read(csock, buffer, sizeof buffer)) < 0)
+	{
+		perror("recv()");
+		exit(errno);
+	}
+	if(webSock == INVALID_SOCKET)
 	{
 		perror("socket()");
 		exit(errno);
 	}
-	printf("Initialisation\n");
-	struct hostent *hostinfo = NULL;
-	SOCKADDR_IN sin = { 0 };
-	const char *hostname = "208.97.177.124";
-
+	if((n = (csock, buffer, sizeof buffer)) < 0)
+	{
+		perror("recv()");
+		exit(errno);
+	}
 
 	printf("Hôte trouvé\n");
-	hostinfo = gethostbyname(hostname);
-	if (hostinfo == NULL)
+	webinfo = gethostbyname(webip);
+	if (webinfo == NULL)
 	{
-		fprintf (stderr, "Unknown host %s.\n", hostname);
+		fprintf (stderr, "Unknown host ");
 		exit(EXIT_FAILURE);
 	}
-	sin.sin_addr = *(IN_ADDR *) hostinfo->h_addr;
-	sin.sin_port = htons(PORT);
-	sin.sin_family = AF_INET;
+	webSin.sin_addr = *(IN_ADDR *) webinfo->h_addr;
+	webSin.sin_port = htons(80);
+	webSin.sin_family = AF_INET;
 
-	if(connect(sock,(SOCKADDR *) &sin, sizeof(SOCKADDR)) == SOCKET_ERROR)
+	if(connect(webSock,(SOCKADDR *) &webSin, sizeof(SOCKADDR)) == SOCKET_ERROR)
 	{
 		perror("connect()");
 		exit(errno);
 	}
 	printf("Connecté\n");
-	if(n = (send(sock, buffer, 10, 0)) < 0)
+	if(n = (write(webSock, buffer, strlen(buffer)) < 0))
 	{
 		perror("send()");
 		exit(errno);
 	}
 	printf("Requête envoyée\n");
-	if((n = recv(sock,recvBuffer,sizeof buffer - 1,0)) < 0)
+	if((n = read(webSock,webBuffer,sizeof webBuffer)) < 0)
 	{
 		perror("recv()");
 		exit(errno);
 	}
-	recvBuffer[n] = 0;
-	puts(recvBuffer);
-	printf("Recepetion terminée\n");
-	printf("%s",recvBuffer);	
+	puts(webBuffer);
+	printf("Page web Chargée\n");
 	closesocket(sock);
-	return 1;
+	closesocket(webSock);
 
 
+
+
+	return 0;
 }
