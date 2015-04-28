@@ -35,13 +35,11 @@ int main(){
 		perror("socket()");
 		exit(errno);
 	}
-	printf("Initialisation\n");
 	struct hostent *hostinfo = NULL;
 	SOCKADDR_IN sin = { 0 };
-	const char *hostname = "10.102.26.28";
+	const char *hostname = "192.168.1.18";
 
 
-	printf("Hôte trouvé\n");
 	hostinfo = gethostbyname(hostname);
 	if (hostinfo == NULL)
 	{
@@ -57,21 +55,17 @@ int main(){
 		perror("connect()");
 		exit(errno);
 	}
-	printf("Connecté\n");
 	if(n = (write(sock, buffer, strlen(buffer)) < 0))
 	{
 		perror("send()");
 		exit(errno);
 	}
-	printf("Requête envoyée\n");
 	if((n = read(sock,recvBuffer,sizeof recvBuffer)) < 0)
 	{
 		perror("recv()");
 		exit(errno);
 	}
 	puts(recvBuffer);
-	printf("Recepetion terminée\n");
-	printf("%s",recvBuffer);	
 	closesocket(sock);
 	return 1;
 }
