@@ -66,6 +66,11 @@ int getTime(){
     return x;
 }
 
+struct lastHit{
+	int time;
+	char fileName[];
+};
+
 int main(){
 	char buffer[512] = "GET www.google.be HTTP/1.1\r\nHost: www.google.be\r\nConnection: Close\r\nContent-type: application/x-www-form-urlencoded\r\nContent-Length: 0\r\n\r\n";
 	char buffer2[512];
