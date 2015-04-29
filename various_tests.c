@@ -38,6 +38,7 @@ void filter(char *name){
 	*dst = '\0';
 }
 
+//retourne l'heure actuelle de la machine (chaine de caractere)
 char * getHour(){
 	struct tm* gmtime (const time_t *temps);
 	time_t temps;
@@ -47,16 +48,33 @@ char * getHour(){
 	time(&temps);
     date=*gmtime(&temps);
     sprintf(result, "%d:%d",(date.tm_hour+2+24)%24, date.tm_min);
-    printf("%s\n",result);
 
     return result;
     
 }
 
+//retourne l'heure actuelle de la machine en secondes
+int getTime(){
+	time_t secondes;
+    struct tm now;
+    int x;
+
+    time(&secondes);
+    now=*localtime(&secondes);
+
+    x = now.tm_hour*3600 + now.tm_min*60 + now.tm_sec;
+    return x;
+}
+
+struct lastHit{
+	int time;
+	char fileName[];
+};
+
 int main(){
 	char buffer[512] = "GET www.google.be HTTP/1.1\r\nHost: www.google.be\r\nConnection: Close\r\nContent-type: application/x-www-form-urlencoded\r\nContent-Length: 0\r\n\r\n";
 	char buffer2[512];
-	char buffer3[] = "chien/\//'3é&§§ et çç chat";
+	char buffer3[] = "chien////'3é&§§ et çç chat";
 	char *request = strtok(buffer, "\n\r");
 	char *get;
 	int i=0;
@@ -79,6 +97,8 @@ int main(){
     printf("Heure : %s\n", getHour());
     filter(buffer3);
     printf("%s\n", buffer3);
+    printf("%d\n",getTime());
+
  	/*
     httpend = " HTTP";
     end = "\r\n";
