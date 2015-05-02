@@ -1,4 +1,6 @@
 #include <dirent.h>
+#include <unistd.h>
+#include <pthread.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +23,7 @@ typedef int SOCKET;
 typedef struct sockaddr_in SOCKADDR_IN;
 typedef struct sockaddr SOCKADDR;
 typedef struct in_addr IN_ADDR;
+
 void filter(char *name){
 	char *src, *dst;
 	for (src = name, dst = src; *src; src++) {
@@ -84,14 +87,121 @@ void research(char *str, char *begin, char *end,char *buffer){
 	}
 	buffer[0] = '\0';
 }
-int main(){
-
-	struct hostent *webinfo = NULL;
-	SOCKADDR_IN webSin = { 0 };
+void* clientProcessing(void *arg){
+	SOCKET csock = (SOCKET) arg;
 	char buffer[512];
 	char webBuffer[512];
 	int n = 0;
 	SOCKET webSock = socket(AF_INET,SOCK_STREAM,0);
+	SOCKADDR_IN webSin = { 0 };
+	struct hostent *webinfo = NULL;
+	//Creation du socket avec client pour le transfert de donnée
+
+	//Lecture de la requête
+	if((n = read(csock, buffer, sizeof buffer)) < 0)
+	{
+		perror("recv()");
+		exit(errno);
+	}
+	//Recupération des informations de la page demandée
+	char copyBuffer[strlen(buffer)];
+	strcpy(copyBuffer,buffer);
+	char page[256];
+	char host[256];
+	char webIp[256];
+	char *request = strtok(copyBuffer, "\n\r");
+	char *get;
+	int i=0;
+	while( request != NULL )
+	{
+		if(i==0){
+			research(request, "GET ", " HTTP/1.1", page);
+		}
+		if(i==1){
+			research(request, "Host: ", "\r\n", host);
+		}
+
+		i++;
+		request = strtok(NULL, "\n\r");
+	}
+	/*Creation de socket de connexion avec le serveur web 
+	lorsque la page demandée n'est pas en cache*/
+	strcpy(webIp,host);
+	strcat(host,page);
+	filter(host);
+	strcat(host,".html");
+	if(!isAlreadySave(host)){
+		printf("Page non sauvée\n");
+
+		if(webSock == INVALID_SOCKET)
+		{
+			perror("socket()");
+			exit(errno);
+		}
+		
+		webinfo = gethostbyname(webIp);
+		if (webinfo == NULL)
+		{
+			fprintf (stderr, "Unknown host ");
+			exit(EXIT_FAILURE);
+		}
+		webSin.sin_addr = *(IN_ADDR *) webinfo->h_addr;
+		webSin.sin_port = htons(80);
+		webSin.sin_family = AF_INET;
+
+		if(connect(webSock,(SOCKADDR *) &webSin, sizeof(SOCKADDR)) == SOCKET_ERROR)
+		{
+			perror("connect()");
+			exit(errno);
+		}
+
+		//Envoi de la requête au serveur web
+		if(n = (write(webSock, buffer, strlen(buffer)) < 0))
+		{
+			perror("send()");
+			exit(errno);
+		}
+		puts(buffer);
+		//Lecture de la réponse du serveur web
+		if((n = read(webSock,webBuffer,sizeof webBuffer)) < 0)
+		{
+			perror("recv()");
+			exit(errno);
+		}
+		FILE *file = NULL;
+		file = fopen(host,"w");
+		if(file != NULL){
+			printf("ecriture fichier\n");
+			fputs(webBuffer,file);
+			fclose(file);
+		}
+	}
+	else{
+		//récupération de la page html
+		printf("recupération du fichier\n");
+		FILE *file = NULL;
+		file = fopen(host,"r");
+		char line[SIZEMAX];
+		if(file != NULL){
+			while(fgets(line,SIZEMAX,file) != NULL){
+				strcat(webBuffer,line);
+			}
+			fclose(file);
+		}
+	}
+
+
+	//Transfert du contenu html au client
+	if(n = (write(csock, webBuffer, strlen(webBuffer)) < 0))
+	{
+		perror("send()");
+		exit(errno);
+	}
+
+	closesocket(csock);
+	closesocket(webSock);
+}
+int main(){
 
 	//Creation du socket de connexion avec le client 
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -113,22 +223,16 @@ int main(){
 		exit(1);
 	}
 
-	if( listen(sock, 5) == SOCKET_ERROR)
+	if( listen(sock, 10) == SOCKET_ERROR)
 	{
 		perror("listen()");
 		exit(1);
 	}
-	int actual = 0;
-	int max = sock;
-	SOCKET socks[MAX_CLIENTS];
-	fd_set rdfs; //Descripteur
 	while(1){
-
-		//Recupération de toutes les pages web en memoire dans le dossier courant 
+		pthread_t id;
 		SOCKADDR_IN csin = { 0 };
 		SOCKET csock;
 		int sinsize = sizeof csin;
-		//Creation du socket avec client pour le transfert de donnée
 		csock = accept(sock, (SOCKADDR *) &csin, &sinsize);
 		if(csock == INVALID_SOCKET)
 		{
@@ -136,112 +240,7 @@ int main(){
 			exit(1);
 
 		}
-
-		//Lecture de la requête
-		if((n = read(csock, buffer, sizeof buffer)) < 0)
-		{
-			perror("recv()");
-			exit(errno);
-		}
-		//Recupération des informations de la page demandée
-		char copyBuffer[strlen(buffer)];
-		strcpy(copyBuffer,buffer);
-		char page[256];
-		char host[256];
-		char webIp[256];
-		char *request = strtok(copyBuffer, "\n\r");
-		char *get;
-		int i=0;
-		while( request != NULL )
-		{
-			if(i==0){
-				research(request, "GET ", " HTTP/1.1", page);
-			}
-			if(i==1){
-				research(request, "Host: ", "\r\n", host);
-			}
-
-			i++;
-			request = strtok(NULL, "\n\r");
-		}
-		/*Creation de socket de connexion avec le serveur web 
-		lorsque la page demandée n'est pas en cache*/
-		strcpy(webIp,host);
-		strcat(host,page);
-		filter(host);
-		strcat(host,".html");
-		if(!isAlreadySave(host)){
-			printf("Page non sauvée\n");
-
-			if(webSock == INVALID_SOCKET)
-			{
-				perror("socket()");
-				exit(errno);
-			}
-			
-			webinfo = gethostbyname(webIp);
-			if (webinfo == NULL)
-			{
-				fprintf (stderr, "Unknown host ");
-				exit(EXIT_FAILURE);
-			}
-			webSin.sin_addr = *(IN_ADDR *) webinfo->h_addr;
-			webSin.sin_port = htons(80);
-			webSin.sin_family = AF_INET;
-
-			if(connect(webSock,(SOCKADDR *) &webSin, sizeof(SOCKADDR)) == SOCKET_ERROR)
-			{
-				perror("connect()");
-				exit(errno);
-			}
-
-			//Envoi de la requête au serveur web
-			if(n = (write(webSock, buffer, strlen(buffer)) < 0))
-			{
-				perror("send()");
-				exit(errno);
-			}
-			puts(buffer);
-			//Lecture de la réponse du serveur web
-			if((n = read(webSock,webBuffer,sizeof webBuffer)) < 0)
-			{
-				perror("recv()");
-				exit(errno);
-			}
-			FILE *file = NULL;
-			file = fopen(host,"w");
-			if(file != NULL){
-				printf("ecriture fichier\n");
-				fputs(webBuffer,file);
-				fclose(file);
-			}
-		}
-		else{
-			//récupération de la page html
-			printf("recupération du fichier\n");
-			FILE *file = NULL;
-			file = fopen(host,"r");
-			char line[SIZEMAX];
-			if(file != NULL){
-				while(fgets(line,SIZEMAX,file) != NULL){
-					strcat(webBuffer,line);
-				}
-				fclose(file);
-			}
-		}
-
-
-		//Transfert du contenu html au client
-		if(n = (write(csock, webBuffer, strlen(webBuffer)) < 0))
-		{
-			perror("send()");
-			exit(errno);
-		}
-
-		closesocket(csock);
-		closesocket(sock);
-		closesocket(webSock);
+		pthread_create(&id,NULL,clientProcessing,(void*) csock);
 	}
-	printf("\n\nJe rage quit\n\n");
 	return 0;
 }
