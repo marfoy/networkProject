@@ -37,7 +37,7 @@ int main(){
 	}
 	struct hostent *hostinfo = NULL;
 	SOCKADDR_IN sin = { 0 };
-	const char *hostname = "192.168.1.18";
+	const char *hostname = "192.168.0.100";
 
 
 	hostinfo = gethostbyname(hostname);
