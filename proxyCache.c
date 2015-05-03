@@ -25,11 +25,13 @@ typedef struct sockaddr SOCKADDR;
 typedef struct in_addr IN_ADDR;
 
 /**
-Ce maillon de liste chainee contient les informations suivantes :
-seconds : le moment en secondes ou la page a ete enregistree dans le cache.
-fileName : le nom de la page.
-next : le pointeur vers le maillon suivant.
-**/
+*\struct Node
+*\brief maillon de liste chainee
+* Ce maillon de liste chainee contient les informations suivantes :
+* seconds : le moment en secondes ou la page a ete enregistree dans le cache.
+* fileName : le nom de la page.
+* next : le pointeur vers le maillon suivant.
+*/
 typedef struct node *nodePointer;
 struct node{
 	int seconds;
@@ -37,6 +39,15 @@ struct node{
 	nodePointer next;
 };
 
+/**
+*\fn int in(nodePointer head, nodePointer tail, char *file)
+*\brief determine si la liste chainee entree en parametre contient la page (son nom) entree en parametre.
+*
+*\param head pointeur vers la tete de la liste chainee qu'on veut analyser
+*\param tail pointeur vers la queue de la liste chainee qu'on veut analyser
+*\param file nom de la page (chaine de caractere)
+*\return 1 si la page se trouve deja dans la liste chainee, 0 si celle-ci n'est pas trouvee
+*/
 int in(nodePointer head, nodePointer tail, char *file){
 	nodePointer currentNode = head;
 	while(1){
@@ -51,8 +62,28 @@ int in(nodePointer head, nodePointer tail, char *file){
 }
 
 /**
-verifie si une page chargee l'a ete avec un temps > 5 min
-@param head : pointeur vers la tete de la liste chainee associant les pages chargees avec le moment ou elles ont ete chargees pour la derniere fois
+*\fn int getTime()
+*\brief retourne l'heure actuelle de la machine en secondes
+*
+*\return l'heure actuelle de la machine en secondes
+*/
+int getTime(){
+	time_t secondes;
+    struct tm now;
+    int x;
+
+    time(&secondes);
+    now=*localtime(&secondes);
+
+    x = now.tm_hour*3600 + now.tm_min*60 + now.tm_sec;
+    return x;
+}
+
+/**
+*\fn void * check(void *argv)
+*\brief verifie si une page chargee l'a ete avec un temps > 3 min
+*
+*\param : aucune importance (la fonction a cette signature pour la lancer dans un thread)
 */
 void * check(void *argv){
 	struct node n1;
@@ -133,7 +164,7 @@ void * check(void *argv){
 			}
 			while(1){
 				
-				if(getTime()-currentNode->seconds > 40){
+				if(getTime()-currentNode->seconds > 3*60){
 					SOCKET webSock = socket(AF_INET,SOCK_STREAM,0);
 					SOCKADDR_IN webSin = { 0 };
 					struct hostent *webinfo = NULL;
@@ -216,6 +247,12 @@ void * check(void *argv){
 	}
 }
 
+/**
+*\fn void filter(char *name)
+*\brief filtre la chaine de caractere passee en parametre, y retire tous les caracteres speciaux
+* http://stackoverflow.com/questions/2422742/filter-string-in-c
+*\param name un pointeur vers la chaine de caractere a filtrer
+*/
 void filter(char *name){
 	char *src, *dst;
 	for (src = name, dst = src; *src; src++) {
@@ -226,20 +263,12 @@ void filter(char *name){
 	*dst = '\0';
 }
 
-char * getHour(){
-	struct tm* gmtime (const time_t *temps);
-	time_t temps;
-	struct tm date;
-	char *result = (char *) malloc(sizeof(char) * 32);
-
-	time(&temps);
-	date=*gmtime(&temps);
-	sprintf(result, "%d:%d",(date.tm_hour+2+24)%24, date.tm_min);
-	printf("%s\n",result);
-
-	return result;
-
-}
+/**
+*\fn int isAlreadySave(char *file)
+*\brief determine si le fichier a deja ete sauvegarde en cache
+*
+*\param file nom du fichier a analyser
+*/
 int isAlreadySave(char *file){
 	DIR * rep = opendir(".");
 	if(rep != NULL){
@@ -256,7 +285,15 @@ int isAlreadySave(char *file){
 
 
 }
-//Methode qui rehcherche les informations utiles dans ma requête
+/**
+*\fn void research(char *str, char *begin, char *end,char *buffer)
+*\brief place dans le buffer entre en parametre ce qui se situe entre les chaines de caractere begin et end
+*
+*\param str chaine de caractere a analyser
+*\param begin la chaine de caractere a partir de laquelle la recherche va s'effectuer
+*\param end la chaine de caractere qui marque la fin de la recherche
+*\param buffer pointeur vers le buffer qui va contenir la chaine de caractere comprise entre begin et end
+*/
 void research(char *str, char *begin, char *end,char *buffer){
 	char *first = strstr(str,begin);
 	if(first != NULL){
@@ -279,6 +316,12 @@ void research(char *str, char *begin, char *end,char *buffer){
 	}
 	buffer[0] = '\0';
 }
+
+/**
+*\fn void* clientProcessing(void *arg)
+*\brief analyse la requete du client et repond ensuite a cette requete, recharge la page si elle existe deja, adresse la requete au serveur web sinon et renvoie la reponse au client.
+*
+*/
 void* clientProcessing(void *arg){
 	SOCKET csock = (SOCKET) arg;
 	char buffer[512];
@@ -397,6 +440,7 @@ void* clientProcessing(void *arg){
 
 	closesocket(webSock);
 }
+
 int main(){
 
 	//Creation du socket de connexion avec le client 
