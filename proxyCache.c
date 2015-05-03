@@ -27,10 +27,10 @@ typedef struct in_addr IN_ADDR;
 /**
 *\struct Node
 *\brief maillon de liste chainee
-Ce maillon de liste chainee contient les informations suivantes :
-seconds : le moment en secondes ou la page a ete enregistree dans le cache.
-fileName : le nom de la page.
-next : le pointeur vers le maillon suivant.
+* Ce maillon de liste chainee contient les informations suivantes :
+* seconds : le moment en secondes ou la page a ete enregistree dans le cache.
+* fileName : le nom de la page.
+* next : le pointeur vers le maillon suivant.
 */
 typedef struct node *nodePointer;
 struct node{
@@ -59,6 +59,24 @@ int in(nodePointer head, nodePointer tail, char *file){
 		}
 		currentNode = currentNode->next;
 	}
+}
+
+/**
+*\fn int getTime()
+*\brief retourne l'heure actuelle de la machine en secondes
+*
+*\return l'heure actuelle de la machine en secondes
+*/
+int getTime(){
+	time_t secondes;
+    struct tm now;
+    int x;
+
+    time(&secondes);
+    now=*localtime(&secondes);
+
+    x = now.tm_hour*3600 + now.tm_min*60 + now.tm_sec;
+    return x;
 }
 
 /**
