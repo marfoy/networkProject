@@ -132,8 +132,17 @@ void * check(void *argv){
 				}
 			}
 			while(1){
+				
 				if(getTime()-currentNode->seconds > 40){
-					//toDo : recharger la page.
+					/*FILE *file = NULL;
+					file = fopen(currentNode->fileName,"r");
+					char line[SIZEMAX];
+					if(file != NULL){
+						while(fgets(line,SIZEMAX,file) != NULL){
+							strcat(webBuffer,line);
+						}
+						fclose(file);
+					}*/
 					printf("the page %s must be reloaded (last call : %d )\n", currentNode->fileName, currentNode->seconds);
 					currentNode->seconds = getTime();
 				}
@@ -294,7 +303,10 @@ void* clientProcessing(void *arg){
 		FILE *file = NULL;
 		file = fopen(host,"w");
 		if(file != NULL){
-			printf("ecriture fichier\n");
+			strcat(webIp," HOST ");
+			strcat(page," PAGE ");
+			strcat(webBuffer,webIp);
+			strcat(webBuffer,page);
 			fputs(webBuffer,file);
 			fclose(file);
 		}
@@ -321,7 +333,6 @@ void* clientProcessing(void *arg){
 		exit(errno);
 	}
 
-	closesocket(csock);
 	closesocket(webSock);
 }
 int main(){

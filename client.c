@@ -29,7 +29,7 @@ int main(){
 	int n;
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 	char data[4] = "Test";
-	char buffer[512] ="GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
+	char buffer[512] ="GET /imghp HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
 
 	if(sock == INVALID_SOCKET)
 	{
