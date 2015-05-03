@@ -134,15 +134,75 @@ void * check(void *argv){
 			while(1){
 				
 				if(getTime()-currentNode->seconds > 40){
-					/*FILE *file = NULL;
+					SOCKET webSock = socket(AF_INET,SOCK_STREAM,0);
+					SOCKADDR_IN webSin = { 0 };
+					struct hostent *webinfo = NULL;
+					//On récupère les informations de la requête dans le fichier périmé
+					FILE *file = NULL;
 					file = fopen(currentNode->fileName,"r");
 					char line[SIZEMAX];
+					char request[512];
+					char page[256];
+					char host[256];
+					char webIp[256];
+					char webBuffer[512];
+					int i;
 					if(file != NULL){
-						while(fgets(line,SIZEMAX,file) != NULL){
-							strcat(webBuffer,line);
+						for(i = 0; i < 2 ; i++){
+							fgets(line,SIZEMAX,file);
+							if(i == 0){
+								strcpy(page,line);
+							}
+							else{
+								strcpy(host,line);
+							}
 						}
 						fclose(file);
-					}*/
+					}
+					int n = 0;
+					sprintf(request, "GET %s\r\n Host: %s\r\n\r\n",host,page);
+					
+					if(webSock == INVALID_SOCKET)
+					{
+						perror("socket()");
+						exit(errno);
+					}
+					webinfo = gethostbyname(host);
+					if (webinfo == NULL)
+					{
+						fprintf (stderr, "Unknown host ");
+						exit(EXIT_FAILURE);
+					}
+					webSin.sin_addr = *(IN_ADDR *) webinfo->h_addr;
+					webSin.sin_port = htons(80);
+					webSin.sin_family = AF_INET;
+
+					if(connect(webSock,(SOCKADDR *) &webSin, sizeof(SOCKADDR)) == SOCKET_ERROR)
+					{
+						perror("connect()");
+						exit(errno);
+					}
+
+					//Envoi de la requête au serveur web
+					if(n = (write(webSock, request, strlen(request)) < 0))
+					{
+						perror("send()");
+						exit(errno);
+					}
+				
+					//Lecture de la réponse du serveur web
+					if((n = read(webSock,webBuffer,sizeof webBuffer)) < 0)
+					{
+						perror("recv()");
+						exit(errno);
+					}
+					file = fopen(currentNode->fileName,"w");
+					if(file != NULL){
+						char fileContent[256];
+						sprintf(fileContent,"%s\n%s\n%s",page,host,webBuffer);
+						fputs(fileContent,file);
+						fclose(file);
+					}
 					printf("the page %s must be reloaded (last call : %d )\n", currentNode->fileName, currentNode->seconds);
 					currentNode->seconds = getTime();
 				}
@@ -302,12 +362,10 @@ void* clientProcessing(void *arg){
 		}
 		FILE *file = NULL;
 		file = fopen(host,"w");
+		char fileContent[512];
 		if(file != NULL){
-			strcat(webIp," HOST ");
-			strcat(page," PAGE ");
-			strcat(webBuffer,webIp);
-			strcat(webBuffer,page);
-			fputs(webBuffer,file);
+			sprintf(fileContent,"%s\n%s\n%s",page,host,webBuffer);
+			fputs(fileContent,file);
 			fclose(file);
 		}
 	}
@@ -317,9 +375,13 @@ void* clientProcessing(void *arg){
 		FILE *file = NULL;
 		file = fopen(host,"r");
 		char line[SIZEMAX];
+		int l = 0;
 		if(file != NULL){
 			while(fgets(line,SIZEMAX,file) != NULL){
-				strcat(webBuffer,line);
+				if(l > 1){
+					strcat(webBuffer,line);
+				}
+				l++;
 			}
 			fclose(file);
 		}
@@ -362,6 +424,9 @@ int main(){
 		perror("listen()");
 		exit(1);
 	}
+	
+	pthread_t fileUpdate;
+	pthread_create(&fileUpdate,NULL,check,NULL);
 	while(1){
 		pthread_t id;
 		SOCKADDR_IN csin = { 0 };
