@@ -37,15 +37,17 @@ struct node{
 	nodePointer next;
 };
 
-int in(nodePointer head, char *file){
+int in(nodePointer head, nodePointer tail, char *file){
 	nodePointer currentNode = head;
-	while(currentNode != NULL){
+	while(1){
 		if(strcmp(currentNode->fileName,file)==0){
 			return 1;
 		}
+		if(currentNode == tail){
+			return 0;
+		}
 		currentNode = currentNode->next;
 	}
-	return 0;
 }
 
 /**
@@ -97,7 +99,7 @@ void * check(void *argv){
 					int len = strlen(dir->d_name);
     				if(dir->d_name[len-5]=='.' && dir->d_name[len-4]=='h' 
     					&& dir->d_name[len-3]=='t' && dir->d_name[len-2]=='m' && dir->d_name[len-1] == 'l'){
-						if(in(head,dir->d_name) == 0){
+						if(in(head, tail, dir->d_name) == 0){
 							printf("%s is not in list. So it is now added in.\n", dir->d_name);
 							//si le fichier n'est pas present, l'ajouter dans la liste.
 							nodePointer nextNode;
@@ -111,7 +113,7 @@ void * check(void *argv){
 				}
 			}
 			while(1){
-				if(getTime()-currentNode->seconds > 10){
+				if(getTime()-currentNode->seconds > 40){
 					//toDo : recharger la page.
 					printf("the page %s must be reloaded (last call : %d )\n", currentNode->fileName, currentNode->seconds);
 					currentNode->seconds = getTime();
