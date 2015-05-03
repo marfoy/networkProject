@@ -71,18 +71,19 @@ void * check(void *argv){
     				int len = strlen(dir->d_name);
     				if(dir->d_name[len-5]=='.' && dir->d_name[len-4]=='h' 
     					&& dir->d_name[len-3]=='t' && dir->d_name[len-2]=='m' && dir->d_name[len-1] == 'l'){
-      					char str[strlen(dir->d_name)+1];
+      					char *str = (char *) malloc(sizeof(char)*(len+1));
       					strcpy(str,dir->d_name);
       					if(i>0){
       						nodePointer nextNode;
       						nextNode = (nodePointer) malloc(sizeof(struct node));
       						currentNode->next = nextNode;
       						currentNode = currentNode->next;
-      						currentNode->fileName = dir->d_name;
+      						currentNode->fileName = str;
       						currentNode->seconds = getTime();
       					}
       					else{
-      						currentNode->fileName = dir->d_name;
+      						//traitement de la tete de la liste
+      						currentNode->fileName = str;
       						currentNode->seconds = getTime();
       					}
       					printf("%s is loaded.\n", currentNode->fileName);
@@ -90,6 +91,9 @@ void * check(void *argv){
       				}
     			}
     			tail = currentNode;
+    			printf("the head is : %s at %d\n",head->fileName,head->seconds);
+    			printf("the tail is : %s at %d\n",tail->fileName,tail->seconds);
+    			printf("\n");
 			}
 		}
 		else{
@@ -97,17 +101,32 @@ void * check(void *argv){
 			if(d){
 				while ((dir = readdir(d)) != NULL){
 					int len = strlen(dir->d_name);
-    				if(dir->d_name[len-5]=='.' && dir->d_name[len-4]=='h' 
+    				if(len > 5 && dir->d_name[len-5]=='.' && dir->d_name[len-4]=='h' 
     					&& dir->d_name[len-3]=='t' && dir->d_name[len-2]=='m' && dir->d_name[len-1] == 'l'){
 						if(in(head, tail, dir->d_name) == 0){
 							printf("%s is not in list. So it is now added in.\n", dir->d_name);
 							//si le fichier n'est pas present, l'ajouter dans la liste.
-							nodePointer nextNode;
-      						nextNode = (nodePointer) malloc(sizeof(struct node));
-							nextNode->fileName = dir->d_name;
+							char *str = (char *) malloc(sizeof(char)*(len+1));
+							strcpy(str,dir->d_name);
+							nodePointer nextNode = (nodePointer) malloc(sizeof(struct node));
+							nextNode->fileName = str;
 							nextNode->seconds = getTime();
 							tail->next = nextNode;
-							tail = tail->next;
+							tail = nextNode;
+
+							printf("the head is : %s at %d\n",head->fileName,head->seconds);
+							printf("the tail is : %s at %d\n",tail->fileName,tail->seconds);
+							printf("\n");
+							printf("this is the new list : \n");
+							while(1){
+								printf("-> %s, -> %d\n", currentNode->fileName, currentNode->seconds);
+								if(currentNode==tail){
+									currentNode = head;
+									break;
+								}
+								currentNode = currentNode->next;
+							}
+							printf("\n");
 						}
 					}
 				}
