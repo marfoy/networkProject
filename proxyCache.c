@@ -13,7 +13,7 @@
 #include <string.h>
 #define MAX_CLIENTS 25
 #define BUF_SIZE 50
-#define SIZEMAX 512
+#define SIZEMAX 256
 #define PORT 4242
 #define errno -1
 #define INVALID_SOCKET -1
@@ -117,14 +117,10 @@ void * check(void *argv){
       						currentNode->fileName = str;
       						currentNode->seconds = getTime();
       					}
-      					printf("%s is loaded.\n", currentNode->fileName);
       					i++;
       				}
     			}
     			tail = currentNode;
-    			printf("the head is : %s at %d\n",head->fileName,head->seconds);
-    			printf("the tail is : %s at %d\n",tail->fileName,tail->seconds);
-    			printf("\n");
 			}
 		}
 		else{
@@ -135,7 +131,6 @@ void * check(void *argv){
     				if(len > 5 && dir->d_name[len-5]=='.' && dir->d_name[len-4]=='h' 
     					&& dir->d_name[len-3]=='t' && dir->d_name[len-2]=='m' && dir->d_name[len-1] == 'l'){
 						if(in(head, tail, dir->d_name) == 0){
-							printf("%s is not in list. So it is now added in.\n", dir->d_name);
 							//si le fichier n'est pas present, l'ajouter dans la liste.
 							char *str = (char *) malloc(sizeof(char)*(len+1));
 							strcpy(str,dir->d_name);
@@ -145,19 +140,13 @@ void * check(void *argv){
 							tail->next = nextNode;
 							tail = nextNode;
 
-							printf("the head is : %s at %d\n",head->fileName,head->seconds);
-							printf("the tail is : %s at %d\n",tail->fileName,tail->seconds);
-							printf("\n");
-							printf("this is the new list : \n");
 							while(1){
-								printf("-> %s, -> %d\n", currentNode->fileName, currentNode->seconds);
 								if(currentNode==tail){
 									currentNode = head;
 									break;
 								}
 								currentNode = currentNode->next;
 							}
-							printf("\n");
 						}
 					}
 				}
@@ -172,11 +161,11 @@ void * check(void *argv){
 					FILE *file = NULL;
 					file = fopen(currentNode->fileName,"r");
 					char line[SIZEMAX];
-					char request[512];
-					char page[256];
-					char host[256];
-					char webIp[256];
-					char webBuffer[512];
+					char request[SIZEMAX];
+					char page[SIZEMAX];
+					char host[SIZEMAX];
+					char webIp[SIZEMAX];
+					char webBuffer[SIZEMAX];
 					int i;
 					if(file != NULL){
 						for(i = 0; i < 2 ; i++){
@@ -229,12 +218,12 @@ void * check(void *argv){
 					}
 					file = fopen(currentNode->fileName,"w");
 					if(file != NULL){
-						char fileContent[256];
+						char fileContent[SIZEMAX];
 						sprintf(fileContent,"%s\n%s\n%s",page,host,webBuffer);
 						fputs(fileContent,file);
 						fclose(file);
 					}
-					printf("the page %s must be reloaded (last call : %d )\n", currentNode->fileName, currentNode->seconds);
+					closesocket(webSock);
 					currentNode->seconds = getTime();
 				}
 				if(currentNode == tail){
@@ -324,8 +313,8 @@ void research(char *str, char *begin, char *end,char *buffer){
 */
 void* clientProcessing(void *arg){
 	SOCKET csock = (SOCKET) arg;
-	char buffer[512];
-	char webBuffer[512];
+	char buffer[SIZEMAX];
+	char webBuffer[SIZEMAX];
 	int n = 0;
 	SOCKET webSock = socket(AF_INET,SOCK_STREAM,0);
 	SOCKADDR_IN webSin = { 0 };
@@ -341,9 +330,9 @@ void* clientProcessing(void *arg){
 	//Recupération des informations de la page demandée
 	char copyBuffer[strlen(buffer)];
 	strcpy(copyBuffer,buffer);
-	char page[256];
-	char host[256];
-	char webIp[256];
+	char page[SIZEMAX];
+	char host[SIZEMAX];
+	char webIp[SIZEMAX];
 	char *request = strtok(copyBuffer, "\n\r");
 	char *get;
 	int i=0;
@@ -366,7 +355,6 @@ void* clientProcessing(void *arg){
 	filter(host);
 	strcat(host,".html");
 	if(!isAlreadySave(host)){
-		printf("Page non sauvée\n");
 
 		if(webSock == INVALID_SOCKET)
 		{
@@ -405,16 +393,15 @@ void* clientProcessing(void *arg){
 		}
 		FILE *file = NULL;
 		file = fopen(host,"w");
-		char fileContent[512];
+		char fileContent[SIZEMAX];
 		if(file != NULL){
-			sprintf(fileContent,"%s\n%s\n%s",page,host,webBuffer);
+			sprintf(fileContent,"%s\n%s\n%s",page,webIp,webBuffer);
 			fputs(fileContent,file);
 			fclose(file);
 		}
 	}
 	else{
 		//récupération de la page html
-		printf("recupération du fichier\n");
 		FILE *file = NULL;
 		file = fopen(host,"r");
 		char line[SIZEMAX];
