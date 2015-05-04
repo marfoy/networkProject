@@ -13,7 +13,7 @@
 #include <string.h>
 #define MAX_CLIENTS 25
 #define BUF_SIZE 50
-#define SIZEMAX 256
+#define SIZEMAX 2048
 #define PORT 4242
 #define errno -1
 #define INVALID_SOCKET -1
@@ -153,7 +153,7 @@ void * check(void *argv){
 			}
 			while(1){
 				
-				if(getTime()-currentNode->seconds > 3*60){
+				if(getTime()-currentNode->seconds > 3){
 					SOCKET webSock = socket(AF_INET,SOCK_STREAM,0);
 					SOCKADDR_IN webSin = { 0 };
 					struct hostent *webinfo = NULL;
@@ -379,18 +379,18 @@ void* clientProcessing(void *arg){
 		}
 
 		//Envoi de la requête au serveur web
-		if(n = (write(webSock, buffer, strlen(buffer)) < 0))
+		if((n = write(webSock, buffer, strlen(buffer))) < 0)
 		{
 			perror("send()");
 			exit(errno);
 		}
-		puts(buffer);
 		//Lecture de la réponse du serveur web
 		if((n = read(webSock,webBuffer,sizeof webBuffer)) < 0)
 		{
 			perror("recv()");
 			exit(errno);
 		}
+		printf("%s\n",webBuffer);
 		FILE *file = NULL;
 		file = fopen(host,"w");
 		char fileContent[SIZEMAX];
@@ -425,6 +425,7 @@ void* clientProcessing(void *arg){
 		exit(errno);
 	}
 
+	closesocket(csock);
 	closesocket(webSock);
 }
 
@@ -433,12 +434,9 @@ int main(){
 	//Creation du socket de connexion avec le client 
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock == INVALID_SOCKET){
-
 		perror("socket()");
 		exit(1);
-
 	}
-
 	SOCKADDR_IN sin = { 0 };
 	sin.sin_addr.s_addr = htonl(INADDR_ANY); 
 	sin.sin_family = AF_INET;
@@ -449,13 +447,11 @@ int main(){
 		perror("blind()");
 		exit(1);
 	}
-
 	if( listen(sock, 10) == SOCKET_ERROR)
 	{
 		perror("listen()");
 		exit(1);
 	}
-	
 	pthread_t fileUpdate;
 	pthread_create(&fileUpdate,NULL,check,NULL);
 	while(1){

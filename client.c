@@ -24,12 +24,14 @@ typedef struct in_addr IN_ADDR;
 */
 
 
-int main(){
+int main(int j,char *arg[]){
 	char recvBuffer[1024];
 	int n;
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 	char data[4] = "Test";
-	char buffer[512] ="GET /imghp HTTP/1.1\r\nHost: www.google.com\r\n\r\n";
+	char buffer[512];
+	puts(arg[1]);
+	sprintf(buffer,"GET / HTTP/1.1\r\nHost: %s \r\n\r\n",arg[1]);
 
 	if(sock == INVALID_SOCKET)
 	{
