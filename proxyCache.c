@@ -362,10 +362,12 @@ void* clientProcessing(void *arg){
 			exit(errno);
 		}
 		
+		webIp[strlen(webIp)-1] = '\0';
 		webinfo = gethostbyname(webIp);
+		printf("%s webip :%s/\n", webinfo, webIp);
 		if (webinfo == NULL)
 		{
-			fprintf (stderr, "Unknown host ");
+			fprintf (stderr, "Unknownghtfghhnnfnfgh host ");
 			exit(EXIT_FAILURE);
 		}
 		webSin.sin_addr = *(IN_ADDR *) webinfo->h_addr;
@@ -452,8 +454,8 @@ int main(){
 		perror("listen()");
 		exit(1);
 	}
-	pthread_t fileUpdate;
-	pthread_create(&fileUpdate,NULL,check,NULL);
+	//pthread_t fileUpdate;
+	//pthread_create(&fileUpdate,NULL,check,NULL);
 	while(1){
 		pthread_t id;
 		SOCKADDR_IN csin = { 0 };
